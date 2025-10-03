@@ -157,20 +157,19 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        best_action = None
+        bestAction = None
         max_value = -100000
         
         
         for act in gameState.getLegalActions(0):
-            successorSte = gameState.generateSuccessor(0, act)
             #next is ghost agent move
-            score = self.get_value(successorSte, 1, 0)
+            score = self.get_value(gameState.generateSuccessor(0, act), 1, 0)
             
             if score > max_value:
                 max_value = score
-                best_action = act
+                bestAction = act
                 
-        return best_action
+        return bestAction
     
     def get_value(self, state: GameState, index, depth):
         
@@ -190,9 +189,8 @@ class MinimaxAgent(MultiAgentSearchAgent):
         else:
             bestScore = 100000
         
-        agents = state.getNumAgents()
         #determine next agent and depth
-        if index == agents - 1:
+        if index == state.getNumAgents() - 1:
             nextIndex = 0
             nextDepth = depth + 1
         else:
@@ -200,9 +198,8 @@ class MinimaxAgent(MultiAgentSearchAgent):
             nextDepth = depth
         
         for action in state.getLegalActions(index):
-            nextState = state.generateSuccessor(index, action)
             #recursive call
-            score = self.get_value(nextState, nextIndex, nextDepth)
+            score = self.get_value(state.generateSuccessor(index, action), nextIndex, nextDepth)
         
             if is_max_node:
                 if score > bestScore:
@@ -224,7 +221,71 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        bestScore = -100000
+        bestAction = None
+        alpha = -100000
+        beta = 100000
+        
+        #initial call for max node - pacman
+        for act in gameState.getLegalActions(0):   
+            #next is ghost agent move         
+            score = self.alpha_beta(alpha, beta, gameState.generateSuccessor(0, act), 0, 1)
+            
+            if score > bestScore:
+                bestScore = score
+                bestAction = act
+            alpha = max(alpha, bestScore)
+            
+        return bestAction
+    
+    def alpha_beta(self, alpha, beta, state: GameState, depth, index):  
+
+        #determine next agent and depth      
+        nextAgent = (index + 1) % state.getNumAgents()
+        nextDepth = depth
+        if nextAgent == 0:
+            nextDepth += 1  
+            
+        # checks terminal state or maximum search depth
+        if depth == self.depth or state.isLose() or state.isWin():
+            return self.evaluationFunction(state)
+        
+        # search function. 
+        # is_max_node for Pacman - agent 0, False for ghosts agent != 0.
+        return self.prune_get_val(alpha, beta, state, depth, index, nextDepth, nextAgent)
+
+    def prune_get_val(self, alpha, beta, state: GameState, depth, index, nextDepth, nextAgent):
+        is_max_agent = (index == 0)
+
+        if is_max_agent:
+            minmax = -100000
+        else:
+            minmax = 100000
+        
+        for action in state.getLegalActions(index):
+            #recursive call
+            prune_get_val = self.alpha_beta(alpha, beta, state.generateSuccessor(index, action), nextDepth, nextAgent)
+
+            if is_max_agent:
+                if prune_get_val > minmax:
+                    #best score for max node
+                    minmax = prune_get_val 
+                if minmax > beta:
+                    #prune
+                    return minmax
+                #beta cut-off
+                alpha = max(alpha, minmax)
+            else:
+                if prune_get_val < minmax:
+                    #best score for min node
+                    minmax = prune_get_val
+                if minmax < alpha:
+                    #prune
+                    return minmax
+                #alpha cut-off
+                beta = min(beta, minmax)
+        return minmax
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
