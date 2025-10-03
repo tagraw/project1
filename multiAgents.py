@@ -157,7 +157,62 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        best_action = None
+        max_value = -100000
+        
+        
+        for act in gameState.getLegalActions(0):
+            successorSte = gameState.generateSuccessor(0, act)
+            #next is ghost agent move
+            score = self.get_value(successorSte, 1, 0)
+            
+            if score > max_value:
+                max_value = score
+                best_action = act
+                
+        return best_action
+    
+    def get_value(self, state: GameState, index, depth):
+        
+        # checks terminal state or maximum search depth
+        if depth == self.depth or state.isLose() or state.isWin():
+            return self.evaluationFunction(state)
+            
+        # search function. 
+        # is_max_node for Pacman - agent 0, False for ghosts agent != 0.
+        is_max_node = (index == 0)
+        return self.search_value(is_max_node, state, index, depth)
+    
+    def search_value(self, is_max_node, state: GameState, index, depth):
+        #initial best score
+        if is_max_node:
+            bestScore = -100000
+        else:
+            bestScore = 100000
+        
+        agents = state.getNumAgents()
+        #determine next agent and depth
+        if index == agents - 1:
+            nextIndex = 0
+            nextDepth = depth + 1
+        else:
+            nextIndex = index + 1
+            nextDepth = depth
+        
+        for action in state.getLegalActions(index):
+            nextState = state.generateSuccessor(index, action)
+            #recursive call
+            score = self.get_value(nextState, nextIndex, nextDepth)
+        
+            if is_max_node:
+                if score > bestScore:
+                    bestScore = score
+            else:
+                if score < bestScore:
+                    bestScore = score
+            
+        return bestScore
+
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
