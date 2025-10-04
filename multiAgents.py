@@ -364,8 +364,52 @@ def betterEvaluationFunction(currentGameState: GameState):
 
     DESCRIPTION: <write something here so we know what you did>
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    score = currentGameState.getScore()
 
-# Abbreviation
+    pacPos = currentGameState.getPacmanPosition()
+
+    foodGrid = currentGameState.getFood()
+    foodList = foodGrid.asList()
+
+    ghostStates = currentGameState.getGhostStates()
+    scaredTimes = [g.scaredTimer for g in ghostStates]
+
+    capsules = currentGameState.getCapsules()
+
+    # heuristic components -> picked experimentally 
+    FOOD = 1.5 # reward for being close to food
+    FOOD_REMAINING = -4 # penalty for food remaining -> explained later in comments
+    CAPSULE_REMAINING = -20 # penalty for capsules remaining
+    GHOST_NEAR = -200 # penalty for being close to ghost -> very high !!!!!1
+    GHOST_DISTANCE = 2.0 # scale for ghost distance when safe
+    SCARED = 10.0 # reward for chasing scared ghosts -> incentavize
+
+    if foodList:
+        minFoodDist = min(manhattanDistance(pacPos, fpos) for fpos in foodList)
+        score += FOOD / (1 + minFoodDist)
+    # penalize remaining food, states w/ less food better
+    score += FOOD_REMAINING * len(foodList)
+
+    # same as above for capsules
+    score += CAPSULE_REMAINING * len(capsules)
+
+    # avoid ghosts that are too close, if scared -> chase
+    for ghost, scared in zip(ghostStates, scaredTimes):
+        gpos = ghost.getPosition()
+        dist = manhattanDistance(pacPos, gpos)
+
+        # active not scared ghost -> INFINITY
+        if scared == 0:
+            if dist <= 1:
+                return -float('inf')
+            score += GHOST_DISTANCE * dist
+            # penalize when dangerously close
+            if dist <= 2:
+                score += GHOST_NEAR / (dist if dist > 0 else 1)
+        else:
+            # scared ghost haha -> chase
+            score += SCARED * (scared / (1 + dist))
+
+    return score
+
 better = betterEvaluationFunction
