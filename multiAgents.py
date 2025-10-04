@@ -299,8 +299,63 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         All ghosts should be modeled as choosing uniformly at random from their
         legal moves.
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        bestAction = None
+        bestValue = -float('inf')
+
+        for action in gameState.getLegalActions(0):
+            succ = gameState.generateSuccessor(0, action)
+            # agent 1 (first ghost), still at search depth 0 
+            value = self.expectimax_value(succ, 1, 0)
+            if value > bestValue:
+                bestValue = value
+                bestAction = action
+
+        return bestAction
+
+    def expectimax_value(self, state: GameState, index: int, depth: int):
+        # return heuristic value if we've reached the depth limit
+        if depth == self.depth or state.isWin() or state.isLose():
+            return self.evaluationFunction(state)
+
+        numAgents = state.getNumAgents()
+
+        if index == 0:
+            best = -float('inf')
+            for action in state.getLegalActions(0):
+                succ = state.generateSuccessor(0, action)
+                # if there is more than one agent, the next agent after pm
+                # a ghost. if only pm then nextIndex wraps back to 0 and we advance the ply.
+                nextIndex = 1 if numAgents > 1 else 0
+                nextDepth = depth
+                if nextIndex == 0:
+                    # increment, wrapped back to pm
+                    nextDepth = depth + 1
+                val = self.expectimax_value(succ, nextIndex, nextDepth)
+                if val > best:
+                    best = val
+            return best
+        else:
+            # expectimax value of a chance node is the avg of its successors.
+            actions = state.getLegalActions(index)
+            if len(actions) == 0:
+                return self.evaluationFunction(state)
+
+            total = 0.0
+            for action in actions:
+                succ = state.generateSuccessor(index, action)
+                # if this ghost is the last agent, the next will be
+                # pm -> we've completed one ply cycle + increment depth
+                if index == numAgents - 1:
+                    nextIndex = 0
+                    nextDepth = depth + 1
+                else:
+                    nextIndex = index + 1
+                    nextDepth = depth
+
+                val = self.expectimax_value(succ, nextIndex, nextDepth)
+                total += val
+
+            return total / len(actions)
 
 def betterEvaluationFunction(currentGameState: GameState):
     """
